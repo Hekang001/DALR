@@ -786,4 +786,3 @@ class MCSE(nn.Module):
             intra_mdal_loss = intra_modal_alignment_loss + rank_loss 
 
             return loss, cross_modal_loss, intra_mdal_loss
-            # , kl_loss
