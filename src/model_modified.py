@@ -667,6 +667,9 @@ class MCSE(nn.Module):
             image_aligned_4_task1 = torch.cat([image_aligned_match, image_aligned_unmatch], dim=0)
             loss_consistency = self.loss_func_similarity(text_aligned_4_task1, image_aligned_4_task1, similarity_label_1)
 
+            cross_modal_loss, intra_modal_loss, contrastive_loss = torch.tensor(0.0, device=self.device), torch.tensor(
+                0.0, device=self.device), torch.tensor(0.0, device=self.device)
+            
             # Knowledge Distillation
             with torch.no_grad():         
                 # Read batch inputs
@@ -729,21 +732,14 @@ class MCSE(nn.Module):
                     cos = nn.CosineSimilarity(dim=-1)
                     first_teacher_top1_sim = cos(first_teacher_z1.unsqueeze(1), first_teacher_z2.unsqueeze(0)) / self.args.tau2
                     second_teacher_top1_sim = cos(second_teacher_z1.unsqueeze(1), second_teacher_z2.unsqueeze(0)) / self.args.tau2
-                    # first_teacher_top1_sim = self.sim(first_teacher_z1.unsqueeze(1), first_teacher_z2.unsqueeze(0)) 
-                    # second_teacher_top1_sim = self.sim(second_teacher_z1.unsqueeze(1), second_teacher_z2.unsqueeze(0))
                    
                     teacher_top1_sim_pred = (self.args.alpha_ * first_teacher_top1_sim) + ((1.0 - self.args.alpha_) * second_teacher_top1_sim)
                     teacher_text_features = (self.args.alpha_ * first_teacher_z1) + ((1.0 - self.args.alpha_) * second_teacher_z1)
                     embeddings_local = (self.args.alpha_ * embeddings1_local) + ((1.0 - self.args.alpha_) * embeddings2_local)
         
-            student_top1_sim_pred = cos_sim.clone()
-            # print(teacher_top1_sim_pred)
-            # kd_loss = jsd(student_top1_sim_pred, teacher_top1_sim_pred.to(self.args.device))
-            kd_loss = self.distillation_loss_fct(teacher_top1_sim_pred.to(self.args.device), student_top1_sim_pred)
 
-           
+            student_top1_sim_pred = cos_sim.clone() 
             embeddings_local = embeddings_local.view((batch_size, num_sent, -1, self.hidden_size))
-
             text_feats_local1, text_feats_local2 = embeddings_local[:, 0], embeddings_local[:, 1]
             text_feats_local1 = text_feats_local1 / text_feats_local1.norm(dim=1, keepdim=True)
             text_feats_local2 = text_feats_local2 / text_feats_local2.norm(dim=1, keepdim=True)
@@ -754,47 +750,40 @@ class MCSE(nn.Module):
 
             loss_t2t_inMod_l1 = self.in_batch_g2l_loss(text_feats_local1, z1, self.args.temp, attention_mask_1[:,1:])
             loss_t2t_inMod_l2 = self.in_batch_g2l_loss(text_feats_local2, z1, self.args.temp, attention_mask_2[:,1:])
+            loss_g2l = (loss_t2t_inMod_l1 + loss_t2t_inMod_l2) / 2      
 
+            rank_loss = self.distillation_loss_fct(teacher_top1_sim_pred.to(self.args.device), student_top1_sim_pred)
+            rank_loss += loss_g2l  
 
-            loss_g2l = (loss_t2t_inMod_l1 + loss_t2t_inMod_l2) / 2
-           
-            # logit_image_text = batch['img'] @ teacher_text_features.t()
             vis_feats_t = batch['img'] / batch['img'].norm(2, dim=-1, keepdim=True)
-            # vis_feats_t = global_image_features / global_image_features.norm(dim=1, keepdim=True)
-           
             text_feats_t = teacher_text_features / teacher_text_features.norm(2, dim=-1, keepdim=True)
-            # text_feats_t = batch['clip_text_feat'] / batch['clip_text_feat'].norm(dim=1, keepdim=True)
-            
             logits_per_image = vis_feats_t @ vis_feats_t.t()
-            logits_per_text = text_feats_t @ text_feats_t.t()  
-            
-         
+            logits_per_text = text_feats_t @ text_feats_t.t() 
+            cos_sim_text_image = self.sim(z1.unsqueeze(1), vis_feats_t.unsqueeze(0)) 
+
+
+            cross_modal_alignment_loss = self.KLContrastiveSimLoss(cos_sim_text_image.t(), logits_per_image, 0.45, 0.5, use_loss="kl")                                         
+            cross_modal_alignment_loss += self.KLContrastiveSimLoss(cos_sim_text_image, logits_per_text, 0.45, 0.5, use_loss="kl")
+            cross_modal_alignment_loss /= 2.0
             
             z1_z2_cos = self.sim(z1.unsqueeze(1), z2.unsqueeze(0))
             z2_z1_cos = self.sim(z2.unsqueeze(1), z1.unsqueeze(0))
-            sd_loss = self.div(z1_z2_cos.softmax(dim=-1).clamp(min=1e-7), z2_z1_cos.softmax(dim=-1).clamp(min=1e-7))
-
-            # v, _, _ = self.visn_model(batch['img'], batch['clip_text_feat'])  # [bs, proj_dim]
+            # sd_loss = self.div(z1_z2_cos.softmax(dim=-1).clamp(min=1e-7), z2_z1_cos.softmax(dim=-1).clamp(min=1e-7))
            
-            v, _, _ = self.visn_model(batch['img'], batch['clip_text_feat'])  # [bs, proj_dim]
-            # v  = self.grounding_image(global_image_features)  # [bs, proj_dim],  output for text grounding       
-           
-            l2v_proj = self.grounding_text(l_pool)  # [bs, 2, proj_dim],  output for vision grounding
-
+            v, _, _ = self.visn_model(batch['img'], batch['clip_text_feat'])  # [bs, proj_dim]    
+            l2v_proj = self.grounding_text(l_pool)  # [bs, 2, proj_dim],  output for vision groundin
             l2v_proj = l2v_proj / l2v_proj.norm(2, dim=-1, keepdim=True)
             
             p1, p2 = l2v_proj[:, 0], l2v_proj[:, 1]  # (bs, proj)
-
             cos_sim_p0_v = self.sim_vl(p1.unsqueeze(1), v.unsqueeze(0), slabels=logits_per_image)  # (bs, bs)
             cos_sim_p1_v = self.sim_vl(p2.unsqueeze(1), v.unsqueeze(0), slabels=logits_per_image)
             
-            
-           
             cross_loss = (self.loss_fct(cos_sim_p0_v, labels) + self.loss_fct(cos_sim_p1_v, labels)) / 2
-            # inter_loss2 = (self.loss_fct(cos_sim_p0_t, labels) + self.loss_fct(cos_sim_p1_t, labels)) / 2
+            cross_modal_loss = 0.01 * loss_consistency + cross_modal_alignment_loss + cross_loss
 
+            intra_modal_alignment_loss = self.KLContrastiveSimLoss(z1_z2_cos, logits_per_text, 0.45, 0.5, use_loss="kl")
 
-            cross_loss = 
+            intra_mdal_loss = intra_modal_alignment_loss + rank_loss 
 
-            return loss, inter_loss, kd_loss, sd_loss, loss_consistency, loss_g2l
+            return loss, cross_modal_loss, intra_mdal_loss
             # , kl_loss

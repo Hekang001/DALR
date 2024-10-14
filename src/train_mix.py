@@ -33,7 +33,6 @@ from datasets import load_dataset
 from teachers import Teacher
 from data import ImgSentDataset, get_transform
 from model_modified import MCSE, BertForCL, ClipVisnModelAlignment, RobertaForCL, ResNetVisnModel, ClipVisnModel
-# from model import MCSE, BertForCL, RobertaForCL, ResNetVisnModel, ClipVisnModel
 from utils import evaluate, inf_train_gen
 from vit import VisionTransformer
 
@@ -189,16 +188,6 @@ def parse_args():
         default=0.05,
         help="Temperature for cross-modality contrastive learning"
     )
-    # parser.add_argument(
-    #     "--hidden_size",
-    #     type=int,
-    #     default=768,
-    #     help="Text embedding dimention of pooled output (mlp)")
-    # parser.add_argument(
-    #     "--proj_dim",
-    #     type=int,
-    #     default=256,
-    #     help="Projection dimension in grounding space")
     parser.add_argument(
         "--lbd",
         type=float,
@@ -345,10 +334,7 @@ def main():
         datefmt="%m/%d/%Y %H:%M:%S",
         level=logging.INFO,
     )
-    # logger.info(accelerator.state)
 
-    # Setup logging, we only want one process per machine to log things on the screen.
-    # accelerator.is_local_main_process is only True for one process per machine.
     logger.setLevel(logging.INFO if accelerator.is_local_main_process else logging.ERROR)
     if accelerator.is_local_main_process:
         datasets.utils.logging.set_verbosity_warning()
@@ -360,9 +346,6 @@ def main():
     # If passed along, set the training seed now.
     set_seed(args.seed)
 
-    # Load pretrained tokenizer
-    # In distributed training, the .from_pretrained methods guarantee that only one local process can concurrently
-    # download model & vocab.
     tokenizer = AutoTokenizer.from_pretrained(args.model_name_or_path, use_fast=True)
     tokenizer.save_pretrained(args.output_dir)
     torch.save(args, os.path.join(args.output_dir, "training_args.bin"))
@@ -387,14 +370,9 @@ def main():
         raise NotImplementedError
 
     if args.framework.lower() == 'mse':
-        #visn_model = ResNetVisnModel(2048, args.proj_dim)
         
         visn_model = ClipVisnModel(768, args.proj_dim)
-        # visn_model = ClipVisnModelAlignment(768, args.proj_dim)
-        # visn_model, transform = clip.load(args.clip_model, device= args.device, jit=False)
-        # visn_model= VisionTransformer(
-        #     img_size=args.image_res, patch_size=16, embed_dim=768, depth=12, num_heads=12, 
-        #     mlp_ratio=4, qkv_bias=True, norm_layer=partial(nn.LayerNorm, eps=1e-6)) 
+        
     else:
         visn_model = None
 
@@ -411,8 +389,7 @@ def main():
         second_teacher_text = Teacher(model_name_or_path=args.second_teacher_model_name_or_path, pooler=second_pooler)
         model = MCSE(lang_model, visn_model, teacher_model_first=first_teacher_text, teacher_model_second=second_teacher_text, args=args)
 
-    # model = MCSE(lang_model, visn_model, args)
-
+  
     # Define collator function
     def data_collator(batch):
         keys = batch[0].keys()
@@ -479,13 +456,7 @@ def main():
                                       collate_fn=data_collator)
     textonly_loader = inf_train_gen(train_dataloader_textonly)
    
-    # if os.path.exists(args.cache_file):
-    #     print("Loading cached dataset...")
-    #     with open(args.cache_file, 'rb') as f:
-    #         train_dataloader_pair = pickle.load(f)
-    #     pair_loader = inf_train_gen(train_dataloader_pair)
-    # else:
-    #     print("Creating dataset and dataloader...")
+   
     train_dataset_pair = ImgSentDataset(text_file=args.caption_file, feature_file=args.feature_file, image_root=args.image_root, transform=transform)
     train_dataloader_pair = DataLoader(train_dataset_pair,
                                     shuffle=True,
@@ -532,8 +503,7 @@ def main():
 
     # Train!   num_processes -> 1
     total_batch_size = args.per_device_train_batch_size * accelerator.num_processes * args.gradient_accumulation_steps
-    # total_batch_size = args.per_device_train_batch_size * args.gradient_accumulation_steps
-
+    
     logger.info("***** Running training *****")
     logger.info(f"  Num text examples = {len(train_dataset_textonly)}")
     logger.info(f"  Num paired examples = {len(train_dataset_pair)}")
@@ -568,18 +538,14 @@ def main():
                     batch[key] = batch[key].to('cuda')
 
             if step % paired_sample_step == 0 and args.framework.lower() == 'mse':
-                intra_loss, inter_loss, kd_loss, sd_loss, loss_consistency, g2l_loss =  model.compute_loss(batch, cal_inter=True)
-                # intra_loss, inter_loss =  model.compute_loss(batch, cal_inter=True)
-                # print(f'intra_loss: {intra_loss}, inter_loss: {inter_loss}, kd_loss: {kd_loss}, sd_loss: {sd_loss}, loss_consistency: {loss_consistency}, g2l_loss: {g2l_loss}')
-                loss =  intra_loss + 0.4 * inter_loss + 0.001 * kd_loss + 0.01 * loss_consistency + 0.01 * sd_loss + 0.01 * g2l_loss
-                # + 0.01 * kl_loss 
+                contrastive_loss, cross_loss, intra_loss =  model.compute_loss(batch, cal_inter=True)
+                loss =  contrastive_loss + 0.1 * cross_loss + 0.2  * intra_loss 
             else:
                 loss = model.compute_loss(batch, cal_inter=False)
 
             loss = loss / args.gradient_accumulation_steps
 
             accelerator.backward(loss)
-            # loss.backward()
 
             if (step+1) % args.gradient_accumulation_steps == 0 or step == num_update_steps_per_epoch-1:
                 torch.nn.utils.clip_grad_norm_(model.parameters(), args.max_grad_norm)
