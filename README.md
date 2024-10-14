@@ -7,7 +7,7 @@ Furthermore, we contend that the relationships in intra-modal among sentences tr
 By integrating ranking distillation with global alignment learning, we effectively align intra-modal representations, alleviating the *intra-modal semantic divergence* (ISD) issue.
 The following figure is an illustration of our models.
 
-![](figure\model.png)
+![](figure/model.png)
 
 
 ## Getting Started
