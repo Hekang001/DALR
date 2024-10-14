@@ -3,8 +3,7 @@
 
 We propose **DALR** (**D**ual-level **A**lignment **L**earning for multimodal sentence **R**epresentation Learning). 
 To achieve cross-modal fine-grained alignment, we propose a cross-modal alignment method to mitigate the *cross-modal misalignment bias* (CMB) issue.
-Furthermore, we contend that the relationships in intra-modal among sentences transcend mere positive or negative labels, encompassing a nuanced ranking structure. 
-By integrating ranking distillation with global alignment learning, we effectively align intra-modal representations, alleviating the *intra-modal semantic divergence* (ISD) issue.
+To alleviate the *intra-modal semantic divergence* (ISD) issue, we integrate ranking distillation with global alignment learning to effectively align intra-modal representations.
 The following figure is an illustration of our models.
 
 ![](figure/model.png)
@@ -15,7 +14,7 @@ The following figure is an illustration of our models.
 ### Download Datasets 
 Run `pip install -r requirements.txt` to prepare the environment.
 
-First you should load Flickr and MSCOCO datasets from the offical website and put them in the following format:
+First you should download Flickr and MSCOCO datasets from the offical website and put them in the following format:
 
 ```bash
 REPO ROOT
@@ -81,7 +80,7 @@ print("Cosine similarity between \"%s\" and \"%s\" is: %.3f" % (texts[0], texts[
 ### Run Evaluation with SentEval
 ```bash
 python eval_senteval.py \
-    --model_name_or_path Model/flickr_bert_base \
+    --model_name_or_path Model/OurModel \
     --task_set sts \
     --mode test \
 ```
@@ -89,7 +88,7 @@ python eval_senteval.py \
 
 ## Train Your Own Models
 
-In the following section, we describe how to train a MSSE model by using our code.
+In the following section, we describe how to train a DALR model by using our code.
 
 ```bash
 pip install torch==1.8.1+cu111 torchvision==0.9.1+cu111 torchaudio==0.8.1 -f https://download.pytorch.org/whl/torch_stable.html
@@ -106,9 +105,11 @@ Then run the following script to install the remaining dependencies,
 ```bash
 pip install -r requirements.txt
 ```
-For unsupervised mixed setting, you can run the following command train your own models and try out different hyperparameters in it as you like
+For unsupervised mixed training setting of `wiki+flickr` and `wiki+coco`, you can run the following command train your own models and try out different hyperparameters in it as you like
 ```bash
-bash scripts/run_***.sh
+bash scripts/run_wiki_flickr.sh
+
+bash scripts/run_wiki_coco.sh
 ```
 
 
