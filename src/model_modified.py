@@ -173,19 +173,6 @@ class ListNet(nn.Module):
         loss = -(q*p).nansum()  / q.nansum()
         return self.gamma_ * loss 
 
-def kld(p, q):
-    # p : batch x n_items
-    # q : batch x n_items
-    return (p * torch.log2(p / q)).sum()
- 
-def jsd(predict, target):
-    # predict : batch x n_items
-    # target : batch x n_items
-    top1_true = F.softmax(target, dim=0)
-    top1_pred = F.softmax(predict, dim=0)
-    jsd = 0.5 * kld(top1_true, top1_pred) + 0.5 * kld(top1_pred, top1_true)
-    return jsd
-
 
 
 class ListMLE(nn.Module):
@@ -374,7 +361,6 @@ class ClipVisnModel(nn.Module):
         visn_feat = self.vmlp(visn_feat)
         visn_feat = visn_feat / visn_feat.norm(2, dim=-1, keepdim=True)
         
-        #text_feat = self.vmlp(text_feat) 2
         text_feat = self.tmlp(text_feat)
         text_feat = text_feat / text_feat.norm(2, dim=-1, keepdim=True)
         
@@ -384,8 +370,6 @@ class ClipVisnModel(nn.Module):
 class ClipVisnModelAlignment(nn.Module):
     def __init__(self, feature_dim,  proj_dim):
         super().__init__()
-        # self.vmlp = MLPLayer(feature_dim, proj_dim)  # visual features -> grounding space
-        # self.tmlp = MLPLayer(feature_dim, proj_dim) # textual features -> grounding space
         self.logit_scale = torch.tensor(np.log(1 / 0.05))
         self.loss_fct = nn.CrossEntropyLoss()
 
@@ -507,7 +491,6 @@ def prepare_data(image, label):
     
     image_nr = image[nr_index]
     
-    # 使用 .clone() 代替 deepcopy
     matched_image = image_nr.clone()
     unmatched_image = image_nr.clone().roll(shifts=5, dims=0)
     
