@@ -97,28 +97,6 @@ class ImgSentDataset(Dataset):
                     clip_feat = torch.tensor(clip_data[k]['lang_feat'][ic])
                    
                     d = {'image':image, 'sent': sent, 'img': img, 'clip_text_feat': clip_feat, 'img_key': k}
-                    # d = {'image':image, 'sent': sent, 'img_key': k}
-                    data.append(d)
-                # for ic in range(len(clip_data[k]['captions'])):
-                # import random
-                # ic = random.randint(0, 4)
-
-                # sent = clip_data[k]['captions'][ic]
-                # clip_feat = torch.tensor(clip_data[k]['lang_feat'][ic])
-                
-                # d = {'sent': sent, 'img': img, 'clip_text_feat': clip_feat, 'img_key': k}
-                # data.append(d)
-
-            # for clip in tqdm(clip_data, desc="Processing clips"):
-            #     # img = torch.tensor(clip_data[k]['image_feat'])
-            #     image_path = os.path.join(self.image_root,clip['image'])        
-            #     image = Image.open(image_path).convert('RGB')   
-            #     image = self.transform(image)   # (C, H, W)   C是通道数（通常为3，即RGB图像），H和W是图像的高度和宽度
-            #     sent = clip['caption']
-            #     image_key = clip['image_id']
-                
-            #     d = {'image':image, 'sent': sent, 'img_key': image_key}
-            #     data.append(d)
                 
         else:
             for sent in sentences:
