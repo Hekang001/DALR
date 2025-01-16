@@ -123,19 +123,6 @@ class STSEval(object):
         all_pearson = pearsonr(all_sys_scores, all_gs_scores)
         all_spearman = spearmanr(all_sys_scores, all_gs_scores)
 
-
-# {'MSRpar': {'pearson': PearsonRResult(statistic=0.6733981475683452, pvalue=3.198762249504683e-100), 'spearman': SignificanceResult(statistic=0.6676468023454749, pvalue=6.093300436222538e-98), 'nsamples': 750, 'align_loss': 0.1699317842721939, 'uniform_loss': -2.3859200477600098}, 
-# 'MSRvid': {'pearson': PearsonRResult(statistic=0.8800875588210584, pvalue=3.613911611192667e-244), 'spearman': SignificanceResult(statistic=0.8811380242198552, pvalue=1.6558562323274917e-245), 'nsamples': 750, 'align_loss': 0.202345609664917, 'uniform_loss': -2.2089102268218994}, 
-# 'SMTeuroparl': {'pearson': PearsonRResult(statistic=0.5168575555593943, pvalue=1.030109475296398e-32), 'spearman': SignificanceResult(statistic=0.6069878776145674, pvalue=1.5226329413043184e-47), 'nsamples': 459, 'align_loss': 0.21498706936836243, 'uniform_loss': -2.022261619567871}, 
-# 'surprise.OnWN': {'pearson': PearsonRResult(statistic=0.7621589823887025, pvalue=2.1601841431401603e-143), 'spearman': SignificanceResult(statistic=0.715843588172194, pvalue=8.602509932350012e-119), 'nsamples': 750, 'align_loss': 0.21920640766620636, 'uniform_loss': -2.216658592224121}, 
-# 'surprise.SMTnews': {'pearson': PearsonRResult(statistic=0.7269180252389671, pvalue=8.758387278252232e-67), 'spearman': SignificanceResult(statistic=0.62866469215841, pvalue=2.8144316628312215e-45), 'nsamples': 399, 'align_loss': 0.20132693648338318, 'uniform_loss': -2.1057519912719727}, 
-# 'all': {'pearson': {'all': 0.8215141884315961, 'mean': 0.7118840539152934, 'wmean': 0.728446404972873}, 'spearman': {'all': 0.7355029993736851, 'mean': 0.7000561969021003, 'wmean': 0.7168326766568324}}}
-
-# {'FNWN': {'pearson': PearsonRResult(statistic=0.6477520780115289, pvalue=7.254800080786047e-24), 'spearman': SignificanceResult(statistic=0.648114567737392, pvalue=6.722205036720558e-24), 'nsamples': 189, 'align_loss': nan, 'uniform_loss': -2.0370664596557617}, 
-# 'headlines': {'pearson': PearsonRResult(statistic=0.8210644669505425, pvalue=2.6325851206603163e-184), 'spearman': SignificanceResult(statistic=0.8264060147267503, pvalue=9.348696860889902e-189), 'nsamples': 750, 'align_loss': 0.18727648258209229, 'uniform_loss': -2.3574347496032715}, 
-# 'OnWN': {'pearson': PearsonRResult(statistic=0.8020027319135983, pvalue=3.336786741455608e-127), 'spearman': SignificanceResult(statistic=0.8026957005811624, pvalue=1.3933022623481177e-127), 'nsamples': 561, 'align_loss': 0.23686152696609497, 'uniform_loss': -1.9427512884140015}, 
-# 'all': {'pearson': {'all': 0.7954631224813478, 'mean': 0.7569397589585565, 'wmean': 0.7920980170404097}, 'spearman': {'all': 0.8055184887667044, 'mean': 0.7590720943484349, 'wmean': 0.7950736349156414}}}
-
         # 读取sub-tasks中的对齐损失和均匀性损失
         all_align = 0
         all_uniform = 0
@@ -153,12 +140,6 @@ class STSEval(object):
             new_uniform_loss.append(all_uniform/all_nsamples)
 
             
-        # results['all'] = {'pearson': {'all': all_pearson[0],
-        #                               'mean': avg_pearson,
-        #                               'wmean': wavg_pearson},
-        #                   'spearman': {'all': all_spearman[0],
-        #                                'mean': avg_spearman,
-        #                                'wmean': wavg_spearman}}
         results['all'] = {'pearson': {'all': all_pearson[0],
                                       'mean': avg_pearson,
                                       'wmean': wavg_pearson,
