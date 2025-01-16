@@ -21,7 +21,7 @@ REPO ROOT
 |
 |--data    
 |  |--Flickr  
-|  |--MSCOCO
+|  |--MS-COCO
 |  |--wiki1m_for_simcse.txt
 ```
 
@@ -80,7 +80,7 @@ print("Cosine similarity between \"%s\" and \"%s\" is: %.3f" % (texts[0], texts[
 ### Run Evaluation with SentEval
 ```bash
 python eval_senteval.py \
-    --model_name_or_path Model/OurModel \
+    --model_name_or_path Model/DALR \
     --task_set sts \
     --mode test \
 ```
