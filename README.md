@@ -39,11 +39,6 @@ bash download_dataset.sh
 
 You can download the model (SimCSE, DiffCSE, etc) from huggingface and put it in the `Model` folder
 
-
-## Access Our Model from Google Drive
-Both the model checkpoints of [flickr-bert-base](https://drive.google.com/drive/folders/1HydlrejDfI2f7KrSiiJqpLq4nimziGYY?usp=drive_link) and [coco-bert-base](https://drive.google.com/drive/folders/1MER98KbqI0gt6Mf3FwTvGterf4coUL_J?usp=drive_link) are available on Google Drive.
-
-
 ## Use Our model
 ``` python
 import torch
